@@ -1,0 +1,7 @@
+[package]
+name = "hello_triangle"
+version = "0.1.0"
+authors = ["Christofer Nolander <christofer.nolander@gmail.com>"]
+
+[dependencies]
+graphics_3d = {path = "../../"}
