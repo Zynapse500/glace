@@ -1,0 +1,9 @@
+[package]
+name = "graphics_3d"
+version = "0.1.0"
+authors = ["Christofer Nolander <christofer.nolander@gmail.com>"]
+
+[dependencies]
+glium = "0.21"
+
+trap = { path = "../trap-rs" }
