@@ -5,18 +5,16 @@ use trap::{
 
 use vertex::Vertex;
 
-pub enum Triangles {
-    IndexedList {
+pub enum DrawCommand {
+    IndexedVertices {
         vertices: Vec<Vertex>,
         indices: Vec<u32>
-    }
+    },
+
+    List(Vec<DrawCommand>)
 }
 
 
 pub trait Draw {
-    fn triangulate(&self) -> Triangles;
-
-    fn transformation(&self) -> Matrix4 {
-        Matrix4::new()
-    }
+    fn draw(&self) -> DrawCommand;
 }

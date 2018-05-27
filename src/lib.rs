@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate glium;
 
-extern crate trap;
+pub extern crate trap;
 
 pub use std::f64::consts::PI;
 

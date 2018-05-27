@@ -1,14 +1,12 @@
-
 use glium;
 use glium::{
     Surface,
     Program,
-
     DrawParameters,
-    index::{
-        PrimitiveType
-    }
+    index::PrimitiveType,
 };
+
+pub use glium::Rect;
 
 
 use trap::Matrix4;
@@ -17,7 +15,7 @@ use trap::Matrix4;
 use color::Color;
 use draw::{
     Draw,
-    Triangles
+    DrawCommand,
 };
 
 use vertex::Vertex;
@@ -43,7 +41,6 @@ impl<'a> Frame<'a> {
         use glium::*;
 
         vertex_array.clear_all_vertices();
-        frame.clear_all((1.0, 1.0, 1.0, 1.0), 1.0, 1);
 
         self::Frame {
             frame,
@@ -54,12 +51,10 @@ impl<'a> Frame<'a> {
                 depth: Depth {
                     test: DepthTest::IfLess,
                     write: true,
-                    .. Default::default()
+                    ..Default::default()
                 },
 
-
-
-                .. Default::default()
+                ..Default::default()
             },
 
             projection_matrix: Matrix4::new(),
@@ -71,24 +66,43 @@ impl<'a> Frame<'a> {
     pub fn clear(&mut self, color: Color) {
         self.flush();
 
-        self.frame.clear_color(
-            color.r as f32,
-            color.g as f32,
-            color.b as f32,
-            color.a as f32
+        self.frame.clear(
+            self.draw_parameters.viewport.as_ref(),
+            Some((color.r as f32, color.g as f32, color.b as f32, color.a as f32)),
+            false,
+            Some(1.0),
+            Some(1)
         );
     }
 
 
     /// Render something
     pub fn draw(&mut self, object: &Draw) {
-        match object.triangulate() {
-            Triangles::IndexedList { vertices, indices } => {
+        self.execute_draw_command(object.draw());
+    }
+
+
+    fn execute_draw_command(&mut self, command: DrawCommand) {
+        match command {
+            DrawCommand::IndexedVertices { vertices, indices } => {
                 self.vertex_array.append_vertices(&vertices, &indices, PrimitiveType::TrianglesList);
             },
+
+            DrawCommand::List(commands) => {
+                for command in commands.into_iter() {
+                    self.execute_draw_command(command);
+                }
+            }
         }
     }
 
+
+    /// Set the viewport
+    pub fn set_viewport(&mut self, viewport: Option<Rect>) {
+        self.flush();
+
+        self.draw_parameters.viewport = viewport;
+    }
 
 
     /// Set the projection mode
@@ -98,9 +112,9 @@ impl<'a> Frame<'a> {
         match projection {
             Projection::Perspective { fov, aspect, near, far } => {
                 self.projection_matrix = Matrix4::perspective(fov, aspect, near, far);
-            },
+            }
 
-            Projection::Orthographic {left, right, top, bottom, near, far } => {
+            Projection::Orthographic { left, right, top, bottom, near, far } => {
                 self.projection_matrix = Matrix4::orthographic(left, right, top, bottom, near, far);
             }
         }
@@ -114,7 +128,7 @@ impl<'a> Frame<'a> {
         match view {
             View::LookAt { eye, target, up } => {
                 self.view_matrix = Matrix4::look_at(eye, target, up);
-            },
+            }
 
             View::None => {
                 self.view_matrix = Matrix4::new();
@@ -136,7 +150,7 @@ impl<'a> Frame<'a> {
                 index_buffer,
                 &self.program,
                 &uniforms,
-                &self.draw_parameters
+                &self.draw_parameters,
             ).unwrap();
         }
 
