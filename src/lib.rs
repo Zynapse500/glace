@@ -23,29 +23,25 @@ pub use glium::glutin::{
 };
 
 mod color;
-
 pub use color::*;
 
 mod draw;
-
 pub use draw::*;
 
 mod vertex;
-
 pub use vertex::*;
 
 mod vertex_array;
 
-mod frame;
 
+mod frame;
 pub use frame::*;
 
-mod screen;
 
+mod screen;
 pub use screen::*;
 
 
 mod projection;
-
 pub use projection::*;
 

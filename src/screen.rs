@@ -1,7 +1,5 @@
 use glium;
 
-use frame::Frame;
-
 
 use glium::{
     Display,
@@ -18,12 +16,13 @@ use glium::{
 use vertex_array::VertexArray;
 
 use std::str::from_utf8;
+use frame::Frame;
 
 pub struct Screen {
     display: Display,
 
     vertex_array: VertexArray,
-    program: Program
+    program: Program,
 }
 
 
@@ -40,7 +39,6 @@ impl Screen {
 
         let vertex_array = VertexArray::new(display.clone());
 
-
         let program = Program::from_source(
             &display,
             from_utf8(include_bytes!("shaders/shader.vert")).unwrap(),
@@ -50,22 +48,22 @@ impl Screen {
 
         Screen {
             display,
-            vertex_array,
 
-            program
+            vertex_array,
+            program,
         }
     }
 
 
     pub fn render<F>(&mut self, mut f: F)
-        where F: FnMut(Frame) {
-        let frame = Frame::new(
+        where F: FnMut(&mut Frame) {
+        let mut frame = Frame::new(
             self.display.draw(),
             &mut self.vertex_array,
             &self.program
         );
 
-        f(frame);
+        f(&mut frame);
     }
 
 
@@ -81,3 +79,4 @@ impl Screen {
         self.display.gl_window().window().set_cursor_state(state).unwrap();
     }
 }
+

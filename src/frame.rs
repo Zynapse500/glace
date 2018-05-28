@@ -1,27 +1,36 @@
 use glium;
 use glium::{
-    Surface,
     Program,
+    Surface,
     DrawParameters,
-    index::PrimitiveType,
+    index::{
+        PrimitiveType
+    },
+
+    framebuffer::{
+        MultiOutputFrameBuffer
+    }
 };
 
 pub use glium::Rect;
+
+use vertex_array::VertexArray;
+
 
 
 use trap::Matrix4;
 
 
 use color::Color;
+
 use draw::{
     Draw,
     DrawCommand,
 };
 
-use vertex::Vertex;
-use vertex_array::VertexArray;
 use projection::Projection;
 use projection::View;
+
 
 pub struct Frame<'a> {
     frame: glium::Frame,
@@ -37,19 +46,21 @@ pub struct Frame<'a> {
 
 
 impl<'a> Frame<'a> {
-    pub fn new(mut frame: glium::Frame, vertex_array: &'a mut VertexArray, program: &'a Program) -> Frame<'a> {
-        use glium::*;
-
+    pub fn new(
+        frame: glium::Frame,
+        vertex_array: &'a mut VertexArray,
+        program: &'a Program
+    ) -> Frame<'a> {
         vertex_array.clear_all_vertices();
 
-        self::Frame {
+        Frame {
             frame,
             vertex_array,
 
             program,
             draw_parameters: DrawParameters {
-                depth: Depth {
-                    test: DepthTest::IfLess,
+                depth: glium::Depth {
+                    test: glium::DepthTest::IfLess,
                     write: true,
                     ..Default::default()
                 },

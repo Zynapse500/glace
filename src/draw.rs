@@ -1,7 +1,4 @@
 
-use trap::{
-    Matrix4
-};
 
 use vertex::Vertex;
 
