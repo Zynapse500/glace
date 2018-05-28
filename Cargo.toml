@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Christofer Nolander <christofer.nolander@gmail.com>"]
 
 [dependencies]
-glium = "0.21"
+gfx = "0.17.1"
+gfx_window_glutin = "0.23.0"
+gfx_device_gl = "0.15.2"
+glutin = "0.15.0"
 
 trap = { path = "../trap-rs" }

@@ -1,47 +1,22 @@
 
-#[macro_use]
-extern crate glium;
-
+extern crate gfx;
+extern crate gfx_window_glutin;
+extern crate gfx_device_gl;
 pub extern crate trap;
+pub extern crate glutin;
+
 
 pub use std::f64::consts::PI;
 
-pub use glium::glutin;
-
-pub use glium::glutin::{
-    EventsLoop,
-    WindowBuilder,
-    ContextBuilder,
-    Event,
-    WindowEvent,
-    DeviceEvent,
-    KeyboardInput,
-    ElementState,
-    VirtualKeyCode,
-    MouseButton,
-    CursorState,
-};
-
-mod color;
-pub use color::*;
-
-mod draw;
-pub use draw::*;
-
-mod vertex;
-pub use vertex::*;
-
-mod vertex_array;
+mod display;
+pub use display::*;
 
 
-mod frame;
-pub use frame::*;
 
+type ColorFormat = gfx::format::Srgba8;
+type DepthFormat = gfx::format::DepthStencil;
 
-mod screen;
-pub use screen::*;
-
-
-mod projection;
-pub use projection::*;
+type Resources = gfx_device_gl::Resources;
+type Factory = gfx_device_gl::Factory;
+type Device = gfx_device_gl::Device;
 
