@@ -2,8 +2,6 @@
 
 out vec4 color;
 
-
-
 in FragData {
     vec3 position;
     vec4 color;

@@ -1,88 +1,88 @@
-use glium;
-use glium::{
-    Program,
-    Surface,
-    DrawParameters,
-    index::{
-        PrimitiveType
-    },
 
-    framebuffer::{
-        MultiOutputFrameBuffer
-    }
+use gfx::{
+    traits::FactoryExt
 };
 
-pub use glium::Rect;
-
-use vertex_array::VertexArray;
-
-
-
-use trap::Matrix4;
-
-
-use color::Color;
+use pipeline::*;
 
 use draw::{
     Draw,
     DrawCommand,
 };
 
-use projection::Projection;
-use projection::View;
+use trap::Matrix4;
 
+use color::Color;
 
-pub struct Frame<'a> {
-    frame: glium::Frame,
+use projection::{
+    Projection,
+    View
+};
 
-    vertex_array: &'a mut VertexArray,
+use vertex::Vertex;
+use vertex_array::VertexArray;
 
-    program: &'a Program,
-    draw_parameters: DrawParameters<'a>,
+pub struct Frame {
+    factory: ::Factory,
+    encoder: ::Encoder,
+    pipeline: ::PipelineState,
+
+    color_view: ::RenderTargetView,
+    depth_stencil_view: ::DepthStencilView,
 
     projection_matrix: Matrix4,
     view_matrix: Matrix4,
+
+    vertex_array: VertexArray
 }
 
 
-impl<'a> Frame<'a> {
+impl Frame {
     pub fn new(
-        frame: glium::Frame,
-        vertex_array: &'a mut VertexArray,
-        program: &'a Program
-    ) -> Frame<'a> {
-        vertex_array.clear_all_vertices();
+        mut factory: ::Factory,
+        pipeline: ::PipelineState,
+        color_view: ::RenderTargetView,
+        depth_stencil_view: ::DepthStencilView,
+        vertex_array: VertexArray
+    ) -> Frame {
+        let encoder = ::Encoder::from(factory.create_command_buffer());
 
         Frame {
-            frame,
-            vertex_array,
+            factory,
+            encoder,
+            pipeline,
 
-            program,
-            draw_parameters: DrawParameters {
-                depth: glium::Depth {
-                    test: glium::DepthTest::IfLess,
-                    write: true,
-                    ..Default::default()
-                },
-
-                ..Default::default()
-            },
+            color_view,
+            depth_stencil_view,
 
             projection_matrix: Matrix4::new(),
             view_matrix: Matrix4::new(),
+
+            vertex_array
         }
     }
 
 
-    pub fn clear(&mut self, color: Color) {
+    pub fn consume(mut self) -> (::Encoder, VertexArray) {
         self.flush();
 
-        self.frame.clear(
-            self.draw_parameters.viewport.as_ref(),
-            Some((color.r as f32, color.g as f32, color.b as f32, color.a as f32)),
-            false,
-            Some(1.0),
-            Some(1)
+        (self.encoder, self.vertex_array)
+    }
+
+
+    pub fn clear(&mut self, color: Color) {
+        self.encoder.clear(
+            &self.color_view,
+            color.into()
+        );
+
+        self.clear_depth();
+    }
+
+    pub fn clear_depth(&mut self) {
+        self.encoder.clear_depth(
+            &self.depth_stencil_view,
+            1.0
         );
     }
 
@@ -92,28 +92,6 @@ impl<'a> Frame<'a> {
         self.execute_draw_command(object.draw());
     }
 
-
-    fn execute_draw_command(&mut self, command: DrawCommand) {
-        match command {
-            DrawCommand::IndexedVertices { vertices, indices } => {
-                self.vertex_array.append_vertices(&vertices, &indices, PrimitiveType::TrianglesList);
-            },
-
-            DrawCommand::List(commands) => {
-                for command in commands.into_iter() {
-                    self.execute_draw_command(command);
-                }
-            }
-        }
-    }
-
-
-    /// Set the viewport
-    pub fn set_viewport(&mut self, viewport: Option<Rect>) {
-        self.flush();
-
-        self.draw_parameters.viewport = viewport;
-    }
 
 
     /// Set the projection mode
@@ -146,38 +124,67 @@ impl<'a> Frame<'a> {
             }
         }
     }
+}
 
 
-    /// Flush the vertex array
-    pub fn flush(&mut self) {
-        for (vertex_buffer, index_buffer) in self.vertex_array.get_vertices() {
-            let uniforms = uniform!(
-                projection: mat_to_arr(self.projection_matrix),
-                view: mat_to_arr(self.view_matrix)
+impl Frame {
+    fn flush(&mut self) {
+        self.draw_vertices();
+
+        self.vertex_array.clear_vertices();
+    }
+
+    fn execute_draw_command(&mut self, command: DrawCommand) {
+        match command {
+            DrawCommand::IndexedVertices { vertices, indices } => {
+                self.vertex_array.append_vertices(vertices.as_slice(), indices.as_slice());
+            },
+
+            DrawCommand::List(commands) => {
+                for command in commands.into_iter() {
+                    self.execute_draw_command(command);
+                }
+            }
+        }
+    }
+
+    fn draw_vertices(&mut self) {
+        let vertices = self.vertex_array.get_vertices();
+        let indices = self.vertex_array.get_indices();
+
+        if vertices.len() > 0 && indices.len() > 0 {
+            let (vertex_buffer, slice) = self.factory.create_vertex_buffer_with_slice(
+                vertices,
+                indices
             );
 
-            self.frame.draw(
-                vertex_buffer,
-                index_buffer,
-                &self.program,
-                &uniforms,
-                &self.draw_parameters,
-            ).unwrap();
+            let transform_buffer = self.factory.create_constant_buffer(1);
+
+            let data = pipe::Data {
+                vbuf: vertex_buffer,
+                transform: transform_buffer,
+                out_color: self.color_view.clone(),
+                out_depth_stencil: self.depth_stencil_view.clone()
+            };
+
+            self.encoder.update_buffer(
+                &data.transform,
+                &[Transform {
+                    projection: self.projection_matrix.into(),
+                    view: self.view_matrix.into()
+                }],
+                0
+            );
+
+            self.encoder.draw(
+                &slice,
+                &self.pipeline,
+                &data
+            );
         }
-
-        self.vertex_array.clear_all_vertices();
     }
 }
 
-
-impl<'a> Drop for Frame<'a> {
-    fn drop(&mut self) {
-        self.flush();
-
-        // Finish drawing on drop
-        self.frame.set_finish().unwrap()
-    }
-}
 
 fn mat_to_arr(matrix: Matrix4) -> [[f32; 4]; 4] {
     matrix.into()
